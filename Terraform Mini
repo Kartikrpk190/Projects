@@ -1,1 +1,100 @@
+# Terraform Mini Project
+
+provider "aws" {
+  region = "us-east-1"
+  profile = "default"
+}
+
+resource "aws_instance" "DEVAPP" {
+    ami = "ami-0b73a1aa23f9fb745"
+    instance_type = "t2.micro"
+   //vpc_security_group_ids = ["${aws_security_group.SG.id}"]
+   subnet_id = "${aws_subnet.public_subnet_01.id}"
+}
+
+
+
+resource "aws_security_group" "SG" {
+    name = "SG"
+    vpc_id = "${aws_vpc.VPC1.id}"
+    ingress {
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+
+    }
+   
+
+ ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+
+    }
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+        Name = "ssh-sg"
+
+    }
+
+}
+
+//creating a VPC
+resource "aws_vpc" "VPC1" {
+    cidr_block = "10.1.0.0/16"
+    tags = {
+      Name = "VPC1"
+    }
+  
+}
+
+
+// Creating a Subnet 
+resource "aws_subnet" "public_subnet_01" {
+    vpc_id = "${aws_vpc.VPC1.id}"
+    cidr_block = "10.1.1.0/24"
+    map_public_ip_on_launch = "true"
+    availability_zone = "us-east-1c"
+    tags = {
+      Name = "public_subnet_01"
+    }
+  
+}
+
+//Creating a Internet Gateway 
+resource "aws_internet_gateway" "IntGW" {
+    vpc_id = "${aws_vpc.VPC1.id}"
+    tags = {
+      Name = "IntGW"
+    }
+}
+
+// Create a route table 
+resource "aws_route_table" "public-rt" {
+    vpc_id = "${aws_vpc.VPC1.id}"
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = "${aws_internet_gateway.IntGW.id}"
+    }
+    tags = {
+      Name = "public-rt"
+    }
+}
+
+// Associate subnet with routetable 
+
+resource "aws_route_table_association" "rta-public-subnet-1" {
+    subnet_id = "${aws_subnet.public_subnet_01.id}"
+    route_table_id = "${aws_route_table.public-rt.id}"
+  
+}
+
 
